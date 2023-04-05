@@ -11,30 +11,34 @@ let perPage = 40;
 
 hideLoadeMoreBtn();
 
-export function onSearchFormSubmit(e) {
+export async function onSearchFormSubmit(e) {
   e.preventDefault();
   hideLoadeMoreBtn();
   page = 1;
   searchQuery = e.currentTarget.elements.searchQuery.value.trim();
-  fetchImages(searchQuery, page, perPage)
-    .then(response => {
-      if (!searchQuery || response.totalHits === 0) {
-        Notiflix.Notify.failure(
-          'Sorry, there are no images matching your search query. Please try again.'
-        );
-        hideLoadeMoreBtn();
-        clearGalleryContainer();
-        return;
-      } else {
-        Notiflix.Notify.success(
-          `Hooray! We found ${response.totalHits} images.`
-        );
-        showLoadeMoreBtn();
-        clearGalleryContainer();
-        renderImagesMarkup(response.hits);
-      }
-    })
-    .catch(error => console.log(error));
+  if (!searchQuery) {
+    failryResultInf();
+    hideLoadeMoreBtn();
+    clearGalleryContainer();
+    return;
+  }
+  try {
+    const { hits, totalHits } = await fetchImages(searchQuery, page, perPage);
+    if (hits.length < 40) {
+      successResultsInf(totalHits);
+      endOfResultsInf();
+      hideLoadeMoreBtn();
+      clearGalleryContainer();
+      renderImagesMarkup(hits);
+    } else {
+      successResultsInf(totalHits);
+      showLoadeMoreBtn();
+      clearGalleryContainer();
+      renderImagesMarkup(hits);
+    }
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 export async function onLoadMoreBtnClick() {
@@ -44,9 +48,7 @@ export async function onLoadMoreBtnClick() {
     const { hits, totalHits } = await fetchImages(searchQuery, page, perPage);
     renderImagesMarkup(hits);
     if (page > totalHits / perPage) {
-      Notiflix.Notify.info(
-        "We're sorry, but you've reached the end of search results."
-      );
+      endOfResultsInf();
       hideLoadeMoreBtn();
     }
   } catch (error) {
@@ -66,4 +68,19 @@ function hideLoadeMoreBtn() {
 }
 function showLoadeMoreBtn() {
   refs.loadeMoreBtn.classList.remove('is-hidden');
+}
+function endOfResultsInf() {
+  setTimeout(() => {
+    Notiflix.Notify.info(
+      "We're sorry, but you've reached the end of search results."
+    );
+  }, 1000);
+}
+function successResultsInf(totalHits) {
+  Notiflix.Notify.success(`Hooray! We found ${totalHits} images.`);
+}
+function failryResultInf() {
+  Notiflix.Notify.failure(
+    'Sorry, there are no images matching your search query. Please try again.'
+  );
 }
